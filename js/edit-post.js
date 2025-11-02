@@ -60,7 +60,23 @@ async function loadUserProfile() {
 
         const result = await response.json();
         if (!response.ok) {
-            handleApiError(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    console.log("refresh success");
+                    accessToken = localStorage.getItem("accessToken");
+                    loadUserProfile();
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
 
         if (result.data.profile_image) {
@@ -113,7 +129,35 @@ profileDropdownButtons.forEach((btn, index) => {
 
                         const result = await response.json();
                         if (!response.ok) {
-                            handleApiError(result);
+                            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                                const refreshSuccess = await tryRefreshToken();
+                                if (refreshSuccess) {
+                                    accessToken = localStorage.getItem("accessToken");
+
+                                    const response = await fetch("http://localhost:8080/auth", {
+                                        method: "DELETE",
+                                        headers: {
+                                            "Authorization": `Bearer ${accessToken}`
+                                        },
+                                        credentials: "include",
+                                    });
+
+                                    const result = await response.json();
+                                    if (!response.ok) {
+                                        handleApiError(result);
+                                        return;
+                                    }
+                                }
+                                else {
+                                    handleApiError(result);
+                                    window.location.href = "/login";
+                                    return;
+                                }
+                            }
+                            else {
+                                handleApiError(result);
+                                return;
+                            }
                         }
 
                         logoutModal.classList.add("hidden");
@@ -160,23 +204,38 @@ async function loadPostData() {
             },
             credentials: "include",
         });
+
+        const result = await response.json();
         if (!response.ok) {
-            throw new Error("게시글 정보를 불러오지 못했습니다.");
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    loadPostData();
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
-        const data = await response.json();
-        console.log("🔥 서버 응답 데이터:", data);
 
-        title.value = data.data.title;
-        content.value = data.data.content;
-        originalImages = data.data.images || [];
+        title.value = result.data.title;
+        content.value = result.data.content;
+        originalImages = result.data.images || [];
 
-        initialTitle = data.data.title;
-        initialContent = data.data.content;
-        initialImages = data.data.images || [];
+        initialTitle = result.data.title;
+        initialContent = result.data.content;
+        initialImages = result.data.images || [];
 
-    renderImageList();
+        renderImageList();
     } catch (err) {
-        alert("게시글 수정 정보를 불러오지 못했습니다.");
+        showToast("게시글 수정 정보를 불러오지 못했습니다.");
     }
 }
 
@@ -256,7 +315,22 @@ async function uploadImagesToS3(files) {
         });
         const result = await response.json();
         if (!response.ok) {
-            throw new Error(result.message);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    uploadImagesToS3(files);
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
 
         return result.data.images.map((url, idx) => {
@@ -285,7 +359,7 @@ async function updatePost() {
     
     const msg = validatePost(postTitle, postContent);
     if (msg) {
-        alert(msg);
+        showToast(msg);
         return;
     }
 
@@ -344,18 +418,70 @@ async function updatePost() {
         });
 
         const result = await response.json();
-        if (response.ok) {
-            modal.classList.remove("hidden");
-            confirmModal.onclick = () => {
-                modal.classList.add("hidden");
-                window.location.href = `/post/${postId}`;
-            };
-        } else {
-            throw new Error(result.message);
+        if (!response.ok) {
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    const response = await fetch(`http://localhost:8080/posts/${postId}`, {
+                        method: "PATCH",
+                        headers: { 
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify(requestBody),
+                        credentials: "include",
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok) {
+                        handleApiError(result);
+                        return;
+                    }
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;s
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
+
+        modal.classList.remove("hidden");
+        confirmModal.onclick = () => {
+            modal.classList.add("hidden");
+            window.location.href = `/post/${postId}`;
+        };
+
     } catch (err) {
-        alert("게시글 수정 중 오류가 발생했습니다.");
+        showToast("게시글 수정 중 오류가 발생했습니다.");
     }
+}
+
+async function tryRefreshToken() {
+    try {
+        localStorage.removeItem("accessToken");
+
+        const response = await fetch("http://localhost:8080/auth/refresh", {
+            method: "POST",
+            credentials: "include",
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            handleApiError(result);
+        }
+
+        localStorage.setItem("accessToken", result.data.access_token);
+        return true;
+    } catch (error) {
+        showToast("토큰 재발급 실패");
+        return false;
+  }
 }
 
 function handleApiError(result) {

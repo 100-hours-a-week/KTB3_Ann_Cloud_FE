@@ -22,7 +22,6 @@ const cancelSignout = document.getElementById("cancelSignout");
 const confirmSignout = document.getElementById("confirmSignout");
 const confirmSignoutComplete = document.getElementById("confirmSignoutComplete");
 
-const accessToken = localStorage.getItem("accessToken");
 const userId = localStorage.getItem("userId");
 
 const errorToast = document.getElementById("errorToast");
@@ -31,6 +30,7 @@ let selectedFile = null;
 
 let initialProfileImage = "";
 let initialNickname = "";
+let accessToken = localStorage.getItem("accessToken");
 
 function showErrorToast(message) {
     errorToast.textContent = message;
@@ -59,7 +59,22 @@ async function loadUserProfile() {
 
         const result = await response.json();
         if (!response.ok) {
-            handleApiError(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    loadUserProfile();
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
 
         if (result.data.profile_image) {
@@ -112,7 +127,35 @@ profileDropdownButtons.forEach((btn, index) => {
 
                         const result = await response.json();
                         if (!response.ok) {
-                            handleApiError(result);
+                            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                                const refreshSuccess = await tryRefreshToken();
+                                if (refreshSuccess) {
+                                    accessToken = localStorage.getItem("accessToken");
+
+                                    const response = await fetch("http://localhost:8080/auth", {
+                                        method: "DELETE",
+                                        headers: {
+                                            "Authorization": `Bearer ${accessToken}`
+                                        },
+                                        credentials: "include",
+                                    });
+
+                                    const result = await response.json();
+                                    if (!response.ok) {
+                                        handleApiError(result);
+                                        return;
+                                    }
+                                }
+                                else {
+                                    handleApiError(result);
+                                    window.location.href = "/login";
+                                    return;
+                                }
+                            }
+                            else {
+                                handleApiError(result);
+                                return;
+                            }
                         }
 
                         logoutModal.classList.add("hidden");
@@ -211,7 +254,22 @@ async function uploadImageToS3(file) {
 
         const result = await response.json();
         if (!response.ok) {
-            handleApiError(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    uploadImagesToS3(files);
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
 
         return result.data.images[0];
@@ -234,8 +292,23 @@ async function loadUserData() {
 
         const result = await response.json();
         if (!response) {
-            handleApiError(result);
-            window.location.href = "/posts";
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    loadUserData();
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                window.location.href = "/posts";
+                return;
+            }
         }
         const user = result.data;
 
@@ -294,7 +367,36 @@ document.getElementById("editProfileForm").addEventListener("submit", async (e) 
 
         const result = await response.json();
         if (!response.ok) {
-            handleApiError(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    const response = await fetch(`http://localhost:8080/users/${userId}`, {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify(requestBody),
+                        credentials: "include",
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok) {
+                        handleApiError(result);
+                        return;
+                    }
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
 
         showToast();
@@ -324,8 +426,37 @@ confirmSignout.addEventListener("click", async () => {
         
         const result = await response.json();
         if (!response.ok) {
-            handleApiError(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    const response = await fetch(`http://localhost:8080/users/${userId}`, {
+                        method: "DELETE",
+                        headers: {
+                            "Authorization": `Bearer ${accessToken}`
+                        },
+                        credentials: "include",
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok) {
+                        handleApiError(result);
+                        return;
+                    }
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
+
+        localStorage.removeItem("accessToken");
 
         signoutModal.classList.add("hidden");
         signoutCompleteModal.classList.remove("hidden");
@@ -355,6 +486,28 @@ function handleApiError(result) {
     else {
         showErrorToast("알 수 없는 오류가 발생했습니다.");
     }
+}
+
+async function tryRefreshToken() {
+    try {
+        localStorage.removeItem("accessToken");
+
+        const response = await fetch("http://localhost:8080/auth/refresh", {
+            method: "POST",
+            credentials: "include",
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            handleApiError(result);
+        }
+
+        localStorage.setItem("accessToken", result.data.access_token);
+        return true;
+    } catch (error) {
+        showToast("토큰 재발급 실패");
+        return false;
+  }
 }
 
 function handleApiError(result) {

@@ -41,8 +41,6 @@ const commentDeleteCompleteBtn = commentDeleteCompleteModal.querySelector("#comm
 
 const commentList = document.getElementById("commentList");
 
-const accessToken = localStorage.getItem("accessToken");
-
 const errorToast = document.getElementById("errorToast");
 
 let postId = null;
@@ -53,6 +51,7 @@ let targetCommentElement = null;
 let lastCommentCreatedAt = null;
 let lastCommentId = null;
 let isLoading = false;
+let accessToken = localStorage.getItem("accessToken");
 
 // URL에서 postId 가져오기
 postId = window.location.pathname.split("/").pop();
@@ -84,7 +83,22 @@ async function loadUserProfile() {
 
         const result = await response.json();
         if (!response.ok) {
-            handleApiError(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    loadUserProfile();
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
 
         if (result.data.profile_image) {
@@ -137,7 +151,35 @@ profileDropdownButtons.forEach((btn, index) => {
 
                         const result = await response.json();
                         if (!response.ok) {
-                            handleApiError(result);
+                            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                                const refreshSuccess = await tryRefreshToken();
+                                if (refreshSuccess) {
+                                    accessToken = localStorage.getItem("accessToken");
+
+                                    const response = await fetch("http://localhost:8080/auth", {
+                                        method: "DELETE",
+                                        headers: {
+                                            "Authorization": `Bearer ${accessToken}`
+                                        },
+                                        credentials: "include",
+                                    });
+
+                                    const result = await response.json();
+                                    if (!response.ok) {
+                                        handleApiError(result);
+                                        return;
+                                    }
+                                }
+                                else {
+                                    handleApiError(result);
+                                    window.location.href = "/login";
+                                    return;
+                                }
+                            }
+                            else {
+                                handleApiError(result);
+                                return;
+                            }
                         }
 
                         logoutModal.classList.add("hidden");
@@ -165,13 +207,27 @@ async function fetchPostData(postId) {
         },
         credentials: "include",
     });
+
     const result = await response.json();
-
     if (!response.ok) {
-        handleApiError(result);
-        window.location.href = "/posts";
+        if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+            const refreshSuccess = await tryRefreshToken();
+            if (refreshSuccess) {
+                accessToken = localStorage.getItem("accessToken");
+                fetchPostData(postId);
+            }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+        else {
+            handleApiError(result);
+            window.location.href = "/posts";
+            return;
+        }
     };
-
     return result.data;
 }
 
@@ -196,6 +252,9 @@ function renderPost(post) {
 
     if (post.profile_image) {
         profileImage.src = post.profile_image;
+    }
+    else {
+        profileImage.src = "../assets/default-profile.png";
     }
   
     if (post.images != null) {
@@ -283,7 +342,34 @@ async function fetchComments() {
 
         const result = await response.json();
         if (!response.ok) {
-            handleApiError(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    const response = await fetch(url, {
+                        method: "GET",
+                        headers: {
+                            "Authorization": `Bearer ${accessToken}`
+                        },
+                        credentials: "include",
+                    });
+                    
+                    const result = await response.json();
+                    if (!response.ok) {
+                        handleApiError(result);
+                        return;
+                    }
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
         const comments = result.data.comments;
 
@@ -394,23 +480,49 @@ confirmPostDelete.addEventListener("click", async () => {
 
     try {
         const response = await fetch(`http://localhost:8080/posts/${postId}`, {
-        method: "DELETE",
-        headers: {
-            "Authorization": `Bearer ${accessToken}`
-        },
-        credentials: "include",
-    });
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${accessToken}`
+            },
+            credentials: "include",
+            });
 
-    const result = await response.json();
-    if (!response.ok) {
-        handleApiError(result);
-    }
+        const result = await response.json();
+        if (!response.ok) {
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    const response = await fetch(`http://localhost:8080/posts/${postId}`, {
+                        method: "DELETE",
+                        headers: {
+                            "Authorization": `Bearer ${accessToken}`
+                        },
+                        credentials: "include",
+                    });
 
-    postDeleteModal.classList.add("hidden");
-    postDeleteCompleteModal.classList.remove("hidden");
+                    const result = await response.json();
+                    if (!response.ok) {
+                        handleApiError(result);
+                        return;
+                    }
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
+        }
+        postDeleteModal.classList.add("hidden");
+        postDeleteCompleteModal.classList.remove("hidden");
     } catch (err) {
         showToast("게시글 삭제 중 오류가 발생했습니다.");
-  }
+    }
 });
 
 postDeleteCompleteBtn.addEventListener("click", () => {
@@ -430,7 +542,6 @@ submitComment.addEventListener("click", async () => {
     if (!content) {
         return;
     }
-
     try {
         const response = await fetch(`http://localhost:8080/posts/${postId}/comments`, {
             method: "POST",
@@ -444,20 +555,45 @@ submitComment.addEventListener("click", async () => {
 
         const result = await response.json();
         if (!response.ok) {
-            handleApiError(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    const response = await fetch(`http://localhost:8080/posts/${postId}/comments`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify({ content }),
+                        credentials: "include",
+                    });
+                    if (!response.ok) {
+                        handleApiError(result);
+                        return;
+                    }
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
 
-    // 댓글 등록 성공 후
-    commentInput.value = "";
-    submitComment.disabled = true;  
+        // 댓글 등록 성공 후
+        commentInput.value = "";
+        submitComment.disabled = true;  
 
-    // 댓글 목록 다시 불러오기 (서버 최신 상태 반영)
-    commentList.innerHTML = ""; // 기존 댓글 다 지우고
-    lastCommentCreatedAt = null;
-    lastCommentId = null;
-    await fetchComments();
-    await initPostPage();
-
+        commentList.innerHTML = "";
+        lastCommentCreatedAt = null;
+        lastCommentId = null;
+        await fetchComments();
+        await initPostPage();
     } catch (err) {
         showToast("댓글 등록 중 오류가 발생했습니다.");
     }
@@ -481,7 +617,6 @@ function updateLikeButtonUI(isLiked, count) {
 
 // 좋아요
 likeBtn.addEventListener("click", async () => {
-
     try {
         const method = isLiked ? "DELETE" : "POST";
 
@@ -494,16 +629,43 @@ likeBtn.addEventListener("click", async () => {
         });
 
         const result = await response.json();
-        if (response.ok) {
-            const likeCountElement = likeBtn.querySelector("strong");
-            const currentCount = parseInt(likeCountElement.textContent);
-            const newCount = isLiked ? currentCount - 1 : currentCount + 1;
-            isLiked = !isLiked;
-            updateLikeButtonUI(isLiked, newCount);
+        if (!response.ok) {
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+
+                    const result = await response.json();
+                    const response = await fetch(`http://localhost:8080/posts/${postId}/likes`, {
+                        method: method,
+                        headers: {
+                            "Authorization": `Bearer ${accessToken}`
+                        },
+                        credentials: "include",
+                    });
+
+                    if (!response.ok) {
+                        handleApiError(result);
+                        return;
+                    }
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
-        else {
-            showToast(result);
-        }
+
+        const likeCountElement = likeBtn.querySelector("strong");
+        const currentCount = parseInt(likeCountElement.textContent);
+        const newCount = isLiked ? currentCount - 1 : currentCount + 1;
+        isLiked = !isLiked;
+        updateLikeButtonUI(isLiked, newCount);
     } catch (err) {
         showToast("좋아요 처리 중 오류가 발생했습니다.");
     }
@@ -538,7 +700,33 @@ confirmCommentDelete.addEventListener("click", async () => {
 
         const result = await response.json();
         if (!response.ok) {
-            handleApiError(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    const response = await fetch(`http://localhost:8080/posts/${postId}/comments/${commentId}`, {
+                        method: "DELETE",
+                        headers: {
+                            "Authorization": `Bearer ${accessToken}`
+                        },
+                        credentials: "include",
+                    });
+                    const result = await response.json();
+                    if (!response.ok) {
+                        handleApiError(result);
+                        return;
+                    }
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
 
         commentDeleteModal.classList.add("hidden");
@@ -656,7 +844,22 @@ async function updateComment(commentId, newContent, commentCard) {
 
         const result = await response.json();
         if (!response.ok) {
-            handleApiError(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    updateComment(commentId, newContent, commentCard);
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
 
         // 성공 시 화면 갱신
@@ -690,6 +893,28 @@ document.addEventListener("DOMContentLoaded", async () => {
         window.location.href = "/posts";
     }
 });
+
+async function tryRefreshToken() {
+    try {
+        localStorage.removeItem("accessToken");
+
+        const response = await fetch("http://localhost:8080/auth/refresh", {
+            method: "POST",
+            credentials: "include",
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            handleApiError(result);
+        }
+
+        localStorage.setItem("accessToken", result.data.access_token);
+        return true;
+    } catch (error) {
+        showToast("토큰 재발급 실패");
+        return false;
+  }
+}
 
 function handleApiError(result) {
     if (result.status === 400) {

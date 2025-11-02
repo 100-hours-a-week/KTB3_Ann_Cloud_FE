@@ -40,7 +40,22 @@ async function loadUserProfile() {
 
         const result = await response.json();
         if (!response.ok) {
-            handleApiError(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    uploadImagesToS3(files);
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
 
         if (result.data.profile_image) {
@@ -93,7 +108,35 @@ profileDropdownButtons.forEach((btn, index) => {
 
                         const result = await response.json();
                         if (!response.ok) {
-                            handleApiError(result);
+                            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                                const refreshSuccess = await tryRefreshToken();
+                                if (refreshSuccess) {
+                                    accessToken = localStorage.getItem("accessToken");
+
+                                    const response = await fetch("http://localhost:8080/auth", {
+                                        method: "DELETE",
+                                        headers: {
+                                            "Authorization": `Bearer ${accessToken}`
+                                        },
+                                        credentials: "include",
+                                    });
+
+                                    const result = await response.json();
+                                    if (!response.ok) {
+                                        handleApiError(result);
+                                        return;
+                                    }
+                                }
+                                else {
+                                    handleApiError(result);
+                                    window.location.href = "/login";
+                                    return;
+                                }
+                            }
+                            else {
+                                handleApiError(result);
+                                return;
+                            }
                         }
 
                         logoutModal.classList.add("hidden");
@@ -194,7 +237,39 @@ document.getElementById("changePasswordForm").addEventListener("submit", async (
 
         const result = await response.json();
         if (!response.ok) {
-            showErrorToast(result);
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
+                const refreshSuccess = await tryRefreshToken();
+                if (refreshSuccess) {
+                    accessToken = localStorage.getItem("accessToken");
+                    const response = await fetch(`http://localhost:8080/users/${userId}/password`, {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify({
+                            password: password.value,
+                            password_confirm: passwordConfirm.value
+                        }),
+                        credentials: "include",
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok) {
+                        handleApiError(result);
+                        return;
+                    }
+                }
+                else {
+                    handleApiError(result);
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+            else {
+                handleApiError(result);
+                return;
+            }
         }
 
         showToast();
@@ -202,6 +277,28 @@ document.getElementById("changePasswordForm").addEventListener("submit", async (
         showErrorToast("비밀번호 수정 중 오류가 발생했습니다.");
     }
 });
+
+async function tryRefreshToken() {
+    try {
+        localStorage.removeItem("accessToken");
+
+        const response = await fetch("http://localhost:8080/auth/refresh", {
+            method: "POST",
+            credentials: "include",
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            handleApiError(result);
+        }
+
+        localStorage.setItem("accessToken", result.data.access_token);
+        return true;
+    } catch (error) {
+        showToast("토큰 재발급 실패");
+        return false;
+  }
+}
 
 function handleApiError(result) {
     if (result.status === 400) {
