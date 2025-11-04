@@ -1,3 +1,4 @@
+/* ======================== 공통 요소 ======================== */
 const email = document.getElementById("email");
 const password = document.getElementById("password");
 
@@ -7,9 +8,9 @@ const passwordHelper = document.getElementById("passwordHelper");
 const loginBtn = document.getElementById("loginBtn");
 const modal = document.getElementById("loginModal");
 const confirmModal = document.getElementById("confirmModal");
-
 const errorToast = document.getElementById("errorToast");
 
+/* ======================== 공통 함수 ======================== */
 function showToast(message) {
     errorToast.textContent = message;
     errorToast.classList.remove("hidden");
@@ -21,6 +22,32 @@ function showToast(message) {
     }, 2500);
 }
 
+function handleApiError(result) {
+    if (result.status === 400) {
+        showToast(result.message);
+    }
+    else if (result.status === 401) {
+        showToast(result.message);
+    }
+    else if (result.status === 422) {
+        result.errors.forEach(err => {
+            if (err.field === "email") {
+                emailHelper.textContent = err.message;
+            } 
+            else if (err.field === "password") {
+                passwordHelper.textContent = err.message;
+            }
+        });
+    } 
+    else if (result.status === 500) {
+        showToast(result.message);
+    }
+    else {
+        showToast("알 수 없는 오류가 발생했습니다.");
+    }
+}
+
+/* ======================== 입력 검증 ======================== */
 // 이메일 검증
 function validateEmail(input) {
 
@@ -51,6 +78,7 @@ function validatePassword(input) {
     return "";
 }
 
+/* ======================== 입력 이벤트 ======================== */
 function checkFormValidity() {
     const emailMsg = validateEmail(email.value);
     const passwordMsg = validatePassword(password.value);
@@ -72,7 +100,7 @@ password.addEventListener("input", () => {
     checkFormValidity();
 });
 
-// 로그인 클릭
+/* ======================== 로그인 ======================== */
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -107,28 +135,3 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
         showToast("로그인 중 오류가 발생했습니다.")
     }
 });
-
-function handleApiError(result) {
-    if (result.status === 400) {
-        showToast(result.message);
-    }
-    else if (result.status === 401) {
-        showToast(result.message);
-    }
-    else if (result.status === 422) {
-        result.errors.forEach(err => {
-            if (err.field === "email") {
-                emailHelper.textContent = err.message;
-            } 
-            else if (err.field === "password") {
-                passwordHelper.textContent = err.message;
-            }
-        });
-    } 
-    else if (result.status === 500) {
-        showToast(result.message);
-    }
-    else {
-        showToast("알 수 없는 오류가 발생했습니다.");
-    }
-}

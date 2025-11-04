@@ -1,3 +1,4 @@
+/* ======================== 공통 요소 ======================== */
 const email = document.getElementById("email");
 const password = document.getElementById("password");
 const passwordConfirm = document.getElementById("passwordConfirm");
@@ -11,14 +12,14 @@ const nicknameHelper = document.getElementById("nicknameHelper");
 
 const modal = document.getElementById("signupModal");
 const confirmModal = document.getElementById("confirmModal");
-
 const errorToast = document.getElementById("errorToast");
 
-const backBtn = document.querySelector(".back-btn")
-    backBtn.addEventListener("click", () => {
-        window.location.href = "/login";
+const backBtn = document.querySelector(".back-btn");
+backBtn.addEventListener("click", () => {
+    window.location.href = "/login";
 });
 
+/* ======================== 공통 함수 ======================== */
 function showToast(message) {
     errorToast.textContent = message;
     errorToast.classList.remove("hidden");
@@ -30,6 +31,43 @@ function showToast(message) {
     }, 2500);
 }
 
+function handleApiError(result) {
+    if (result.status === 400) {
+        showToast(result.message);
+    } 
+    else if (result.status === 409) {
+        showToast(result.message);
+    }
+    else if (result.status === 422) {
+        if (result.message) {
+            showToast(result.message);
+        }
+        if (result.errors) {
+            result.errors.forEach(err => {
+            if (err.field === "email") {
+                emailHelper.textContent = err.message;
+            } 
+            else if (err.field === "password") {
+                passwordHelper.textContent = err.message;
+            } 
+            else if (err.field === "password_confirm") {
+                passwordConfirmHelper.textContent = err.message;
+            } 
+            else if (err.field === "nickname") {
+                nicknameHelper.textContent = err.message;
+            }
+        });
+        }
+    } 
+    else if (result.status === 500) {
+        showToast(result.message);
+    }
+    else {
+        showToast("알 수 없는 오류가 발생했습니다.");
+    }
+}
+
+/* ======================== 입력 검증 ======================== */
 // 이메일 검증
 function validateEmail(input) {
 
@@ -89,6 +127,7 @@ function validateNickname(input) {
     return "";
 }
 
+/* ======================== 입력 이벤트 ======================== */
 function checkFormValidity() {
     const emailMsg = validateEmail(email.value);
     const passwordMsg = validatePassword(password.value);
@@ -124,7 +163,7 @@ nickname.addEventListener("input", () => {
     checkFormValidity();
 });
 
-// 프로필 이미지 업로드
+/* ======================== 프로필 이미지 ======================== */
 const profileImg = document.getElementById("profileImg");
 const profilePreview = document.getElementById("profilePreview");
 const plusIcon = document.getElementById("plusIcon");
@@ -138,7 +177,6 @@ let selectedFile = null;
 profileInput.addEventListener("change", (e) => {
     const image = e.target.files[0];
 
-    // 사진을 선택하지 않고 취소한 경우
     if (!image) {
         if (hasImage) {
             profilePreview.src = "../assets/default-profile.png";
@@ -149,7 +187,6 @@ profileInput.addEventListener("change", (e) => {
         return;
     }
 
-    // 사진을 새로 선택한 경우
     const reader = new FileReader();
     reader.onload = (event) => {
         profilePreview.src = event.target.result;
@@ -160,14 +197,13 @@ profileInput.addEventListener("change", (e) => {
     reader.readAsDataURL(image);
 });
 
-// 프로필 이미지 S3 url 받기
+/* ======================== S3 업로드 ======================== */
 async function uploadImageToS3(file) {
-
     const formData = new FormData();
-    formData.append("files", file);
+    formData.append("file", file);
 
     try {
-        const response = await fetch("http://localhost:8080/images", {
+        const response = await fetch("http://localhost:8080/images/presigned-url", {
             method: "POST",
             body: formData,
         });
@@ -177,9 +213,9 @@ async function uploadImageToS3(file) {
             handleApiError(result);
         }
 
-        const imageUrls = result.data.images;
+        const imageUrl = result.data.image;
 
-        return imageUrls[0];
+        return imageUrl;
 
     } catch (error) {
         showToast("이미지 업로드 중 오류가 발생했습니다.")
@@ -187,7 +223,7 @@ async function uploadImageToS3(file) {
     }
 }
 
-// 회원가입 클릭
+/* ======================== 회원가입 ======================== */
 document.getElementById("signupForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -232,39 +268,3 @@ document.getElementById("signupForm").addEventListener("submit", async (e) => {
 
     }
 });
-
-function handleApiError(result) {
-    if (result.status === 400) {
-        showToast(result.message);
-    } 
-    else if (result.status === 409) {
-        showToast(result.message);
-    }
-    else if (result.status === 422) {
-        if (result.message) {
-            showToast(result.message);
-        }
-        if (result.errors) {
-            result.errors.forEach(err => {
-            if (err.field === "email") {
-                emailHelper.textContent = err.message;
-            } 
-            else if (err.field === "password") {
-                passwordHelper.textContent = err.message;
-            } 
-            else if (err.field === "password_confirm") {
-                passwordConfirmHelper.textContent = err.message;
-            } 
-            else if (err.field === "nickname") {
-                nicknameHelper.textContent = err.message;
-            }
-        });
-        }
-    } 
-    else if (result.status === 500) {
-        showToast(result.message);
-    }
-    else {
-        showToast("알 수 없는 오류가 발생했습니다.");
-    }
-}

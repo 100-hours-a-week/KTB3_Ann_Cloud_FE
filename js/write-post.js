@@ -1,3 +1,4 @@
+/* ======================== 공통 요소 ======================== */
 const userProfileImg = document.querySelector(".user-profile");
 const profileDropdown = document.querySelector(".profile-dropdown");
 const logoutModal = document.getElementById("logoutModal");
@@ -18,13 +19,12 @@ const postHelper = document.getElementById("postHelper");
 const modal = document.getElementById("writePostModal");
 const confirmModal = document.getElementById("confirmModal");
 const backBtn = document.querySelector(".back-btn");
-
 const errorToast = document.getElementById("errorToast");
 
 let accessToken = localStorage.getItem("accessToken");
-// 이미지 파일 선택 및 표시
 let selectedFiles = [];
 
+/* ======================== 공통 함수 ======================== */
 function showToast(message) {
     errorToast.textContent = message;
     errorToast.classList.remove("hidden");
@@ -36,65 +36,104 @@ function showToast(message) {
     }, 2500);
 }
 
-backBtn.addEventListener("click", () => {s
-    window.location.href = "/posts";
-});
+function handleApiError(result) {
+    if (result.status === 400) {
+        showToast(result.message);
+    }
+    else if (result.status === 401) {
+        showToast(result.message);
+    }
+    else if (result.status === 422) {
+        result.errors.forEach(err => {
+            if (err.field === "title") {
+                postHelper.textContent = err.message;
+            } 
+            else if (err.field === "content") {
+                postHelper.textContent = err.message;
+            }
+        });
+    }
+    else if (result.status === 500) {
+        showToast(result.message);
+    }
+    else {
+        showToast("알 수 없는 오류가 발생했습니다.");
+    }
+}
 
-async function loadUserProfile() {
+/* ======================== 토큰 재발급 ======================== */
+async function tryRefreshToken() {
     try {
-        const response = await fetch("http://localhost:8080/users/me", {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${accessToken}`,
-            },
+        localStorage.removeItem("accessToken");
+
+        const response = await fetch("http://localhost:8080/auth/refresh", {
+            method: "POST",
             credentials: "include",
         });
 
         const result = await response.json();
         if (!response.ok) {
-            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
-                const refreshSuccess = await tryRefreshToken();
-                if (refreshSuccess) {
-                    accessToken = localStorage.getItem("accessToken");
-                    loadUserProfile();
-                }
-                else {
-                    handleApiError(result);
-                    window.location.href = "/login";
-                    return;
-                }
-            }
-            else {
-                handleApiError(result);
-                return;
-            }
+            handleApiError(result);
+            return false;
         }
 
-        if (result.data.profile_image) {
+        localStorage.setItem("accessToken", result.data.access_token);
+        return true;
+    } catch (error) {
+        showToast("토큰 재발급 실패");
+        return false;
+  }
+}
+
+// ====================== 프로필 ======================
+async function loadUserProfile() {
+    try {
+        let result = await fetchUserProfile();
+
+        if (result.data?.profile_image) {
             userProfileImg.src = result.data.profile_image;
-        }
-        else {
+        } else {
             userProfileImg.src = "../assets/default-profile.png";
         }
-
     } catch (err) {
-        showToast("프로필 사진 업로드 중 오류가 발생했습니다.");
+        showToast("프로필 정보를 불러오는 중 오류가 발생했습니다.");
     }
 }
 
-userProfileImg.addEventListener("click", () => {
-    profileDropdown.classList.toggle("hidden");
-});
+async function fetchUserProfile() {
+    let response = await fetch("http://localhost:8080/users/me", {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${accessToken}` },
+        credentials: "include",
+    });
 
-document.addEventListener("click", (e) => {
-    if (!profileDropdown.contains(e.target) && e.target !== userProfileImg) {
-        profileDropdown.classList.add("hidden");
+    if (response.status === 401) {
+        const refreshed = await tryRefreshToken();
+        if (!refreshed) {
+            window.location.href = "/login";
+            return;
+        }
+
+        accessToken = localStorage.getItem("accessToken");
+        response = await fetch("http://localhost:8080/users/me", {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${accessToken}` },
+            credentials: "include",
+        });
     }
-});
 
-// 프로필 드롭다운의 각 버튼 클릭 시 페이지 이동
+    const result = await response.json();
+    if (!response.ok) {
+        handleApiError(result);
+        return;
+    }
+
+    return result;
+}
+
+// ====================== 회원 페이지 ======================
 profileDropdownButtons.forEach((btn, index) => {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", () => {
         switch (index) {
             case 0: // 회원정보수정
                 window.location.href = "/profile";
@@ -103,70 +142,85 @@ profileDropdownButtons.forEach((btn, index) => {
                 window.location.href = "/password";
                 break;
             case 2: // 로그아웃
-                logoutModal.classList.remove("hidden");
-
-                cancelLogout.onclick = () => {
-                    logoutModal.classList.add("hidden");
-                };
-                confirmLogout.onclick = async() => {
-                    try {
-                        const response = await fetch("http://localhost:8080/auth", {
-                            method: "DELETE",
-                            headers: {
-                                "Authorization": `Bearer ${accessToken}`
-                            },
-                            credentials: "include",
-                        });
-
-                        const result = await response.json();
-                        if (!response.ok) {
-                            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
-                                const refreshSuccess = await tryRefreshToken();
-                                if (refreshSuccess) {
-                                    accessToken = localStorage.getItem("accessToken");
-
-                                    const response = await fetch("http://localhost:8080/auth", {
-                                        method: "DELETE",
-                                        headers: {
-                                            "Authorization": `Bearer ${accessToken}`
-                                        },
-                                        credentials: "include",
-                                    });
-
-                                    const result = await response.json();
-                                    if (!response.ok) {
-                                        handleApiError(result);
-                                        return;
-                                    }
-                                }
-                                else {
-                                    handleApiError(result);
-                                    window.location.href = "/login";
-                                    return;
-                                }
-                            }
-                            else {
-                                handleApiError(result);
-                                return;
-                            }
-                        }
-
-                        logoutModal.classList.add("hidden");
-                        logoutCompleteModal.classList.remove("hidden");
-
-                        confirmLogoutComplete.onclick = () => {
-                            logoutCompleteModal.classList.add("hidden");
-                            window.location.href = "/login";
-                        };
-                    } catch (err) {
-                        showToast("로그아웃 중 오류가 발생했습니다.");
-                    }
-                };
+                showLogoutModal();
                 break;
         }
     });
 });
 
+function showLogoutModal() {
+    logoutModal.classList.remove("hidden");
+
+    cancelLogout.onclick = () => {
+        logoutModal.classList.add("hidden");
+    };
+
+    confirmLogout.onclick = handleLogout;
+}
+
+async function handleLogout() {
+    try {
+        const result = await fetchLogout();
+
+        if (!result) {
+            return;
+        }
+
+        finalizeLogout();
+    } catch (err) {
+        showToast("로그아웃 중 오류가 발생했습니다.");
+    }
+}
+
+async function fetchLogout() {
+    try {
+        let response = await fetch("http://localhost:8080/auth", {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${accessToken}` },
+            credentials: "include",
+        });
+
+        if (response.status === 401) {
+            const refreshSuccess = await tryRefreshToken();
+            if (!refreshSuccess) {
+                window.location.href = "/login";
+                return;
+            }
+
+            accessToken = localStorage.getItem("accessToken");
+            response = await fetch("http://localhost:8080/auth", {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${accessToken}` },
+                credentials: "include",
+            });
+        }
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            logoutModal.classList.add("hidden");
+            handleApiError(result);
+            return;
+        }
+
+        return result;
+    } catch (err) {
+        return null;
+    }
+}
+
+function finalizeLogout() {
+    localStorage.removeItem("accessToken");
+    logoutModal.classList.add("hidden");
+    logoutCompleteModal.classList.remove("hidden");
+
+    confirmLogoutComplete.onclick = () => {
+        logoutCompleteModal.classList.add("hidden");
+        window.location.href = "/login";
+    };
+}
+
+// ====================== 입력 검증 ======================
 function validatePost(title, content) {
     if (!title.trim() || !content.trim()) {
         return "제목, 내용을 모두 작성해주세요.";
@@ -182,9 +236,7 @@ function checkFormValidity() {
     submitBtn.classList.toggle("active", valid);
 }
 
-title.addEventListener("input", checkFormValidity);
-content.addEventListener("input", checkFormValidity);
-
+// ====================== 파일 업로드 ======================
 image.addEventListener("change", (e) => {
     const newFiles = Array.from(e.target.files);
     selectedFiles = [
@@ -194,16 +246,9 @@ image.addEventListener("change", (e) => {
         )
     ];
     renderFileList();
-
-    const fileLabel = image.nextElementSibling;
-    if (fileLabel && fileLabel.tagName === "P") {
-        fileLabel.textContent = selectedFiles.length > 0
-            ? ""
-            : "파일을 선택해주세요.";
-    }
 });
 
-// 파일 목록 렌더링
+
 function renderFileList() {
     let fileListContainer = document.getElementById("fileList");
 
@@ -237,7 +282,7 @@ function renderFileList() {
     });
 }
 
-// 이미지 S3 URL 받기
+// ====================== 이미지 S3 업로드 ======================
 async function uploadImagesToS3(files) {
     if (!files.length) {
         return [];
@@ -247,52 +292,61 @@ async function uploadImagesToS3(files) {
     files.forEach(file => formData.append("files", file));
 
     try {
-        const response = await fetch("http://localhost:8080/images", {
-            method: "POST",
-            body: formData,
-        });
+        let result = await requestImageUpload(formData);
 
-        const result = await response.json();
-        if (!response.ok) {
-            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
-                const refreshSuccess = await tryRefreshToken();
-                if (refreshSuccess) {
-                    accessToken = localStorage.getItem("accessToken");
-                    uploadImagesToS3(files);
-                }
-                else {
-                    handleApiError(result);
-                    window.location.href = "/login";
-                    return;
-                }
-            }
-            else {
-                handleApiError(result);
-                return;
-            }
+        if (!result) {
+            return [];
         }
 
-        return result.data.images.map((url, idx) => {
-            const file = files[idx];
-            const fullName = file.name;
-            const dotIndex = fullName.lastIndexOf(".");
-            const name = dotIndex !== -1 ? fullName.substring(0, dotIndex) : fullName;
-            const extension = dotIndex !== -1 ? fullName.substring(dotIndex + 1) : "";
-
+        return files.map((file, idx) => {
+            const url = result.data.images[idx];
+            const dotIndex = file.name.lastIndexOf(".");
             return {
                 image_url: url,
-                image_name: name,
-                extension: extension,
+                image_name: dotIndex !== -1 ? file.name.substring(0, dotIndex) : file.name,
+                extension: dotIndex !== -1 ? file.name.substring(dotIndex + 1) : "",
             };
         });
 
-    } catch (error) {
+    } catch {
         showToast("이미지 업로드 중 오류가 발생했습니다.");
-        return;
+        return [];
     }
 }
 
-// 게시글 추가
+async function requestImageUpload(formData) {
+
+    let response = await fetch("http://localhost:8080/images", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: formData,
+    });
+
+    if (response.status === 401) {
+        const refreshed = await tryRefreshToken();
+        if (!refreshed) {
+            window.location.href = "/login";
+            return;
+        }
+
+        accessToken = localStorage.getItem("accessToken");
+        response = await fetch("http://localhost:8080/images", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${accessToken}` },
+            body: formData,
+        });
+    }
+    
+    const result = await response.json();
+    if (!response.ok) {
+        handleApiError(result);
+        return;
+    }
+
+    return result;
+}
+
+// ====================== 게시글 등록 ======================
 async function addPost() {
     const postTitle = title.value;
     const postContent = content.value;
@@ -309,116 +363,88 @@ async function addPost() {
             imageInfos = await uploadImagesToS3(selectedFiles);
         }
 
-        const response = await fetch("http://localhost:8080/posts", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${accessToken}`
-            },
-            body: JSON.stringify({
-                title: postTitle,
-                content: postContent,
-                post_images: imageInfos,
-            }),
-            credentials: "include",
-        });
+        const result = await requestAddPost(postTitle, postContent, imageInfos);
 
-        const result = await response.json();
-        if (!response.ok) {
-            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
-                const refreshSuccess = await tryRefreshToken();
-                if (refreshSuccess) {
-                    accessToken = localStorage.getItem("accessToken");
-                    const response = await fetch("http://localhost:8080/posts", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${accessToken}`
-                        },
-                        body: JSON.stringify({
-                            title: postTitle,
-                            content: postContent,
-                            post_images: imageInfos,
-                        }),
-                        credentials: "include",
-                    });
-
-                    const result = await response.json();
-                    if (!response.ok) {
-                        handleApiError(result);
-                        return;
-                    }
-                }
-                else {
-                    handleApiError(result);
-                    window.location.href = "/login";
-                    return;
-                }
-            }
-            else {
-                handleApiError(result);
-                return;
-            }
+        if (!result) {
+            return;
         }
 
         modal.classList.remove("hidden");
-
         confirmModal.onclick = () => {
             modal.classList.add("hidden");
             window.location.href = "/posts";
         };
-    } catch (err) {
+    } catch {
         showToast("게시글 등록 중 오류가 발생했습니다.");
     }
 }
 
-submitBtn.addEventListener("click", addPost);
+async function requestAddPost(title, content, imageInfos) {
+    let response = await fetch("http://localhost:8080/posts", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+            title,
+            content,
+            post_images: imageInfos,
+        }),
+        credentials: "include",
+    });
 
-async function tryRefreshToken() {
-    try {
-        localStorage.removeItem("accessToken");
-
-        const response = await fetch("http://localhost:8080/auth/refresh", {
-            method: "POST",
-            credentials: "include",
-        });
-
-        const result = await response.json();
-        if (!response.ok) {
-            handleApiError(result);
+    if (response.status === 401) {
+        const refreshed = await tryRefreshToken();
+        if (!refreshed) {
+            window.location.href = "/login";
+            return;
         }
 
-        localStorage.setItem("accessToken", result.data.access_token);
-        return true;
-    } catch (error) {
-        showToast("토큰 재발급 실패");
-        return false;
-  }
-}
-
-function handleApiError(result) {
-    if (result.status === 400) {
-        showToast(result.message);
-    }
-    else if (result.status === 401) {
-        showToast(result.message);
-    }
-    else if (result.status === 422) {
-        result.errors.forEach(err => {
-            if (err.field === "title") {
-                postHelper.textContent = err.message;
-            } 
-            else if (err.field === "content") {
-                postHelper.textContent = err.message;
-            }
+        accessToken = localStorage.getItem("accessToken");
+        response = await fetch("http://localhost:8080/posts", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+                title,
+                content,
+                post_images: imageInfos,
+            }),
+            credentials: "include",
         });
     }
-    else if (result.status === 500) {
-        showToast(result.message);
+
+    const result = await response.json();
+    if (!response.ok) {
+        handleApiError(result);
+        return null;
     }
-    else {
-        showToast("알 수 없는 오류가 발생했습니다.");
-    }
+
+    return result;
 }
 
+// ====================== 이벤트 ======================
+backBtn.addEventListener("click", () => {s
+    window.location.href = "/posts";
+});
+
+userProfileImg.addEventListener("click", () => {
+    profileDropdown.classList.toggle("hidden");
+});
+
+document.addEventListener("click", (e) => {
+    if (!profileDropdown.contains(e.target) && e.target !== userProfileImg) {
+        profileDropdown.classList.add("hidden");
+    }
+});
+
+title.addEventListener("input", checkFormValidity);
+content.addEventListener("input", checkFormValidity);
+
+submitBtn.addEventListener("click", addPost);
+
+// ====================== 초기 실행 ======================
 loadUserProfile();
