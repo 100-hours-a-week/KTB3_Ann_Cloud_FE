@@ -9,83 +9,26 @@ const confirmLogout = document.getElementById("confirmLogout");
 const logoutCompleteModal = document.getElementById("logoutCompleteModal");
 const confirmLogoutComplete = document.getElementById("confirmLogoutComplete");
 
-const title = document.getElementById("title");
-const content = document.getElementById("content");
-const image = document.getElementById("image");
-const postHelper = document.getElementById("postHelper");
-
-const submitBtn = document.getElementById("submitBtn");
 const backBtn = document.querySelector(".back-btn");
+const password = document.getElementById("password");
+const passwordConfirm = document.getElementById("passwordConfirm");
+const passwordHelper = document.getElementById("passwordHelper");
+const passwordConfirmHelper = document.getElementById("passwordConfirmHelper");
+const submitBtn = document.getElementById("submitBtn");
 
-const modal = document.getElementById("writePostModal");
-const confirmModal = document.getElementById("confirmModal");
+const toast = document.getElementById("toast");
 const errorToast = document.getElementById("errorToast");
 
+const userId = localStorage.getItem("userId");
+
 let accessToken = localStorage.getItem("accessToken");
-let postId = window.location.pathname.split("/").pop();
-
-let selectedFiles = [];
-let originalImages = [];
-let initialTitle = "";
-let initialContent = "";
-let initialImages = [];
-
-/* ======================== 공통 함수 ======================== */
-function showToast(message) {
-    errorToast.textContent = message;
-    errorToast.classList.remove("hidden");
-    errorToast.classList.add("show");
-
-    setTimeout(() => {
-        errorToast.classList.remove("show");
-        setTimeout(() => errorToast.classList.add("hidden"), 300);
-    }, 2500);
-}
 
 backBtn.addEventListener("click", () => {
-    window.location.href = `/post/${postId}`;
+    window.location.href = "/posts";
 });
 
-async function loadUserProfile() {
-    try {
-        const response = await fetch("http://localhost:8080/users/me", {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-            },
-            credentials: "include",
-        });
+/* ======================== 공통 함수 ======================== */
 
-        const result = await response.json();
-        if (!response.ok) {
-            if (response.status === 401) {
-                const refreshSuccess = await tryRefreshToken();
-                if (refreshSuccess) {
-                    accessToken = localStorage.getItem("accessToken");
-                    loadUserProfile();
-                }
-                else {
-                    window.location.href = "/login";
-                    return;
-                }
-            }
-            else {
-                handleApiError(result);
-                return;
-            }
-        }
-
-        if (result.data.profile_image) {
-            userProfileImg.src = result.data.profile_image;
-        }
-        else {
-            userProfileImg.src = "../assets/default-profile.png";
-        }
-
-    } catch (err) {
-        showToast("프로필 사진 업로드 중 오류가 발생했습니다.");
-    }
-}
 
 userProfileImg.addEventListener("click", () => {
     profileDropdown.classList.toggle("hidden");
@@ -105,7 +48,7 @@ profileDropdownButtons.forEach((btn, index) => {
                 window.location.href = "/profile";
                 break;
             case 1: // 비밀번호수정
-                window.location.href = "/password";
+                window.location.reload();
                 break;
             case 2: // 로그아웃
                 logoutModal.classList.remove("hidden");
@@ -118,14 +61,14 @@ profileDropdownButtons.forEach((btn, index) => {
                         const response = await fetch("http://localhost:8080/auth", {
                             method: "DELETE",
                             headers: {
-                                Authorization: `Bearer ${accessToken}`
+                                "Authorization": `Bearer ${accessToken}`
                             },
                             credentials: "include",
                         });
 
                         const result = await response.json();
                         if (!response.ok) {
-                            if (response.status === 401) {
+                            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
                                 const refreshSuccess = await tryRefreshToken();
                                 if (refreshSuccess) {
                                     accessToken = localStorage.getItem("accessToken");
@@ -145,6 +88,7 @@ profileDropdownButtons.forEach((btn, index) => {
                                     }
                                 }
                                 else {
+                                    handleApiError(result);
                                     window.location.href = "/login";
                                     return;
                                 }
@@ -163,7 +107,7 @@ profileDropdownButtons.forEach((btn, index) => {
                             window.location.href = "/login";
                         };
                     } catch (err) {
-                        showToast("로그아웃 중 오류가 발생했습니다.");
+                        showErrorToast("로그아웃 중 오류가 발생했습니다.");
                     }
                 };
                 break;
@@ -171,259 +115,102 @@ profileDropdownButtons.forEach((btn, index) => {
     });
 });
 
-function validatePost(title, content) {
-    if (!title.trim() || !content.trim()) {
-        return "제목, 내용을 모두 작성해주세요.";
+// 토스트 표시 함수
+function showToast() {
+    toast.textContent = "수정 완료";
+    toast.classList.add("show");
+    toast.classList.remove("hidden");
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+        toast.classList.add("hidden");
+    }, 2000);
+}
+
+// 비밀번호 검증
+function validatePassword(input) {
+
+    if (!input.trim()) {
+        return "비밀번호를 입력해주세요.";
     }
+
+    const regex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[^\s]{8,20}$/;
+    if (!regex.test(input)) {
+        return "비밀번호는 8자 이상, 20자 이하이며, 대문자, 소문자, 숫자, 특수문자를 각각 최소 1개 포함해야 합니다.";
+    }
+
+    return "";
+}
+
+// 비밀번호 확인 검증
+function validatePasswordConfirm(input) {
+
+    if (!input.trim()) {
+        return "비밀번호를 한번 더 입력해주세요.";
+    }
+
+    if (password.value !== passwordConfirm.value) {
+      return "비밀번호가 다릅니다.";
+    }
+
+    return "";
 }
 
 function checkFormValidity() {
-    const postMsg = validatePost(title.value, content.value);
-    postHelper.textContent = postMsg;
+    const passwordMsg = validatePassword(password.value);
+    const passwordConfirmMsg = validatePasswordConfirm(passwordConfirm.value);
 
-    const valid = !postMsg || selectedFiles.length > 0 || originalImages.length !== initialImages.length;
-    submitBtn.disabled = !valid;
-    submitBtn.classList.toggle("active", valid);
+    const allValid = !passwordMsg && !passwordConfirmMsg;
+    submitBtn.disabled = !allValid;
+    submitBtn.classList.toggle("active", allValid);
 }
 
-title.addEventListener("input", checkFormValidity);
-content.addEventListener("input", checkFormValidity);
-
-// 기존 게시글 불러오기
-async function loadPostData() {
-    try {
-        const response = await fetch(`http://localhost:8080/posts/${postId}/edit`, {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${accessToken}`
-            },
-            credentials: "include",
-        });
-
-        const result = await response.json();
-        if (!response.ok) {
-            if (response.status === 401) {
-                const refreshSuccess = await tryRefreshToken();
-                if (refreshSuccess) {
-                    accessToken = localStorage.getItem("accessToken");
-                    loadPostData();
-                }
-                else {
-                    window.location.href = "/login";
-                    return;
-                }
-            }
-            else {
-                handleApiError(result);
-                return;
-            }
-        }
-
-        title.value = result.data.title;
-        content.value = result.data.content;
-        originalImages = result.data.images || [];
-
-        initialTitle = result.data.title;
-        initialContent = result.data.content;
-        initialImages = result.data.images || [];
-
-        renderImageList();
-    } catch (err) {
-        showToast("게시글 수정 정보를 불러오지 못했습니다.");
-    }
-}
-
-// 기존 이미지 표시
-function renderImageList() {
-    const fileListContainer = document.getElementById("fileList") || createFileList();
-    fileListContainer.innerHTML = "";
-
-    originalImages.forEach((img, index) => {
-        const chip = createChip(`${img.image_name}.${img.extension}`, () => {
-            originalImages = originalImages.filter(
-                (image) => image.image_url !== img.image_url
-            );
-            renderImageList();
-            checkFormValidity();
-        });
-        fileListContainer.appendChild(chip);
-    });
-
-    selectedFiles.forEach((file, index) => {
-        const chip = createChip(file.name, () => {
-            selectedFiles.splice(index, 1);
-            renderImageList();
-            checkFormValidity();
-        });
-        fileListContainer.appendChild(chip);
-    });
-}
-
-
-function createChip(label, onRemove) {
-    const chip = document.createElement("div");
-    chip.classList.add("file-chip");
-
-    const span = document.createElement("span");
-    span.textContent = label;
-
-    const btn = document.createElement("button");
-    btn.textContent = "x";
-    btn.classList.add("remove-btn");
-    btn.addEventListener("click", onRemove);
-
-    chip.appendChild(span);
-    chip.appendChild(btn);
-
-    return chip;
-}
-
-function createFileList() {
-    const div = document.createElement("div");
-    div.id = "fileList";
-    div.classList.add("file-list");
-    image.insertAdjacentElement("afterend", div);
-
-    return div;
-}
-
-// 이미지 선택 시 추가
-image.addEventListener("change", (e) => {
-    const newFiles = Array.from(e.target.files);
-    selectedFiles.push(...newFiles);
-    renderImageList();
+password.addEventListener("input", () => {
+    const msg = validatePassword(password.value);
+    passwordHelper.textContent = msg;
+    checkFormValidity();
 });
 
-// S3 업로드
-async function uploadImagesToS3(files) {
-    if (!files.length) {
-        return [];
-    }
-    const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
+passwordConfirm.addEventListener("input", () => {
+    const msg = validatePasswordConfirm(passwordConfirm.value);
+    passwordConfirmHelper.textContent = msg;
+    checkFormValidity();
+});
+
+// 수정하기 클릭
+document.getElementById("changePasswordForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
 
     try {
-        const response = await fetch("http://localhost:8080/images", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${accessToken}` },
-            body: formData,
-        });
-        const result = await response.json();
-        if (!response.ok) {
-            if (response.status === 401) {
-                const refreshSuccess = await tryRefreshToken();
-                if (refreshSuccess) {
-                    accessToken = localStorage.getItem("accessToken");
-                    uploadImagesToS3(files);
-                }
-                else {
-                    window.location.href = "/login";
-                    return;
-                }
-            }
-            else {
-                handleApiError(result);
-                return;
-            }
-        }
-
-        return result.data.images.map((url, idx) => {
-            const file = files[idx];
-            const fullName = file.name;
-            const dotIndex = fullName.lastIndexOf(".");
-            const name = dotIndex !== -1 ? fullName.substring(0, dotIndex) : fullName;
-            const extension = dotIndex !== -1 ? fullName.substring(dotIndex + 1) : "";
-
-            return {
-                image_url: url,
-                image_name: name,
-                extension: extension,
-            };
-        });
-    } catch (err) {
-        alert("이미지 업로드 중 오류 발생");
-        return [];
-    }
-}
-
-// 게시글 수정
-async function updatePost() {
-    const postTitle = title.value;
-    const postContent = content.value;
-    
-    const msg = validatePost(postTitle, postContent);
-    if (msg) {
-        showToast(msg);
-        return;
-    }
-
-    const isTitleChanged = postTitle !== initialTitle;
-    const isContentChanged = postContent !== initialContent;
-    const isImageChanged =
-        selectedFiles.length > 0 ||
-        originalImages.length !== initialImages.length ||
-        !originalImages.every((img, idx) =>
-            img.image_url === initialImages[idx]?.image_url
-        );
-
-    if (!isTitleChanged && !isContentChanged && !isImageChanged) {
-        modal.classList.remove("hidden");
-        confirmModal.onclick = () => {
-            modal.classList.add("hidden");
-            window.location.href = `/post/${postId}`;
-        };
-        return;
-    }
-
-    try {
-        let uploaded = [];
-        if (selectedFiles.length > 0) {
-            uploaded = await uploadImagesToS3(selectedFiles);
-        }
-
-        const requestBody = {};
-        if (isTitleChanged) {
-            requestBody.title = postTitle;
-        }
-        if (isContentChanged) {
-            requestBody.content = postContent;
-        }
-        if (isImageChanged) {
-            const mergedImages = [...originalImages, ...uploaded];
-            requestBody.post_images = mergedImages.map(img => ({
-                image_url: img.image_url,
-                image_name: img.image_name,
-                extension: img.extension
-            }));
-        }
-
-        if (!requestBody.post_images) {
-            requestBody.post_images = [];
-        }
-        
-        const response = await fetch(`http://localhost:8080/posts/${postId}`, {
+        const response = await fetch(`http://localhost:8080/users/${userId}/password`, {
             method: "PATCH",
-            headers: { 
+            headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${accessToken}`
+                "Authorization": `Bearer ${accessToken}`
             },
-            body: JSON.stringify(requestBody),
+            body: JSON.stringify({
+                password: password.value,
+                password_confirm: passwordConfirm.value
+            }),
             credentials: "include",
         });
 
         const result = await response.json();
         if (!response.ok) {
-            if (response.status === 401) {
+            if (result.message === "인증이 필요합니다. 다시 로그인해주세요.") {
                 const refreshSuccess = await tryRefreshToken();
                 if (refreshSuccess) {
                     accessToken = localStorage.getItem("accessToken");
-                    const response = await fetch(`http://localhost:8080/posts/${postId}`, {
+                    const response = await fetch(`http://localhost:8080/users/${userId}/password`, {
                         method: "PATCH",
-                        headers: { 
+                        headers: {
                             "Content-Type": "application/json",
-                            Authorization: `Bearer ${accessToken}`
+                            "Authorization": `Bearer ${accessToken}`
                         },
-                        body: JSON.stringify(requestBody),
+                        body: JSON.stringify({
+                            password: password.value,
+                            password_confirm: passwordConfirm.value
+                        }),
                         credentials: "include",
                     });
 
@@ -434,8 +221,9 @@ async function updatePost() {
                     }
                 }
                 else {
+                    handleApiError(result);
                     window.location.href = "/login";
-                    return;s
+                    return;
                 }
             }
             else {
@@ -444,16 +232,11 @@ async function updatePost() {
             }
         }
 
-        modal.classList.remove("hidden");
-        confirmModal.onclick = () => {
-            modal.classList.add("hidden");
-            window.location.href = `/post/${postId}`;
-        };
-
-    } catch (err) {
-        showToast("게시글 수정 중 오류가 발생했습니다.");
+        showToast();
+    } catch (error) {
+        showErrorToast("비밀번호 수정 중 오류가 발생했습니다.");
     }
-}
+});
 
 async function tryRefreshToken() {
     try {
@@ -492,12 +275,15 @@ function handleApiError(result) {
     }
     else if (result.status === 422) {
         if (result.message) {
-            postHelper.textContent = "제목, 내용을 모두 작성해주세요."
+            passwordConfirmHelper.textContent = result.message;
         }
-        if (result.errors) {
+        else if (result.errors) {
             result.errors.forEach(err => {
-            if (err.field === "title") {
-                postHelper.textContent = err.message;
+            if (err.field === "password") {
+                passwordHelper.textContent = err.message;
+            }
+            else if (err.field === "password_confirm") {
+                passwordConfirmHelper.textContent = err.message;
             }
         });
         }
@@ -510,7 +296,4 @@ function handleApiError(result) {
     }
 }
 
-submitBtn.addEventListener("click", updatePost);
-
 loadUserProfile();
-loadPostData();
