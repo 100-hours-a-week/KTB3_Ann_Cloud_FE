@@ -427,7 +427,7 @@ async function requestAddPost(title, content, imageInfos) {
 }
 
 // ====================== 이벤트 ======================
-backBtn.addEventListener("click", () => {s
+backBtn.addEventListener("click", () => {
     window.location.href = "/posts";
 });
 
