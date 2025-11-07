@@ -66,7 +66,7 @@ async function tryRefreshToken() {
     try {
         localStorage.removeItem("accessToken");
 
-        const response = await fetch("http://localhost:8080/auth/refresh", {
+        const response = await fetch(`${ENV.API_BASE_URL}/auth/refresh`, {
             method: "POST",
             credentials: "include",
         });
@@ -101,7 +101,7 @@ async function loadUserProfile() {
 }
 
 async function fetchUserProfile() {
-    let response = await fetch("http://localhost:8080/users/me", {
+    let response = await fetch(`${ENV.API_BASE_URL}/users/me`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${accessToken}` },
         credentials: "include",
@@ -115,7 +115,7 @@ async function fetchUserProfile() {
         }
 
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch("http://localhost:8080/users/me", {
+        response = await fetch(`${ENV.API_BASE_URL}/users/me`, {
             method: "GET",
             headers: { "Authorization": `Bearer ${accessToken}` },
             credentials: "include",
@@ -174,7 +174,7 @@ async function handleLogout() {
 
 async function fetchLogout() {
     try {
-        let response = await fetch("http://localhost:8080/auth", {
+        let response = await fetch(`${ENV.API_BASE_URL}/auth`, {
             method: "DELETE",
             headers: { "Authorization": `Bearer ${accessToken}` },
             credentials: "include",
@@ -188,7 +188,7 @@ async function fetchLogout() {
             }
 
             accessToken = localStorage.getItem("accessToken");
-            response = await fetch("http://localhost:8080/auth", {
+            response = await fetch(`${ENV.API_BASE_URL}/auth`, {
                 method: "DELETE",
                 headers: { "Authorization": `Bearer ${accessToken}` },
                 credentials: "include",
@@ -316,7 +316,7 @@ async function uploadImagesToS3(files) {
 
 async function requestImageUpload(formData) {
 
-    let response = await fetch("http://localhost:8080/images", {
+    let response = await fetch(`${ENV.API_BASE_URL}/images`, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
@@ -330,7 +330,7 @@ async function requestImageUpload(formData) {
         }
 
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch("http://localhost:8080/images", {
+        response = await fetch(`${ENV.API_BASE_URL}/images`, {
             method: "POST",
             headers: { Authorization: `Bearer ${accessToken}` },
             body: formData,
@@ -380,7 +380,7 @@ async function addPost() {
 }
 
 async function requestAddPost(title, content, imageInfos) {
-    let response = await fetch("http://localhost:8080/posts", {
+    let response = await fetch(`${ENV.API_BASE_URL}/posts`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -402,7 +402,7 @@ async function requestAddPost(title, content, imageInfos) {
         }
 
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch("http://localhost:8080/posts", {
+        response = await fetch(`${ENV.API_BASE_URL}/posts`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

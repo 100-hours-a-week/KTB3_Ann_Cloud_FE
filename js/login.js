@@ -105,7 +105,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     try {
-        const response = await fetch("http://localhost:8080/auth", {
+        const response = await fetch(`${ENV.API_BASE_URL}/auth`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

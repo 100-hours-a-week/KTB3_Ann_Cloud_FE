@@ -63,9 +63,16 @@
     <script src="../js/signup.js"></script>
 
     <footer class="footer">
-       <a href="http://localhost:8080/terms?from=signup" target="_blank">이용약관</a> |
-        <a href="http://localhost:8080/privacy?from=signup" target="_blank">개인정보처리방침</a>
+        <a id="termsLink" target="_blank">이용약관</a> |
+        <a id="privacyLink" target="_blank">개인정보처리방침</a>
     </footer>
+
+    <script type="module">
+    import ENV from "../js/config.js";
+
+        document.getElementById("termsLink").href = `${ENV.API_BASE_URL}/terms?from=signup`;
+        document.getElementById("privacyLink").href = `${ENV.API_BASE_URL}/privacy?from=signup`;
+    </script>
 
 </body>
 </html>

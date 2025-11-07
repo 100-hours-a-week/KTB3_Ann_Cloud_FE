@@ -87,7 +87,7 @@ async function tryRefreshToken() {
     try {
         localStorage.removeItem("accessToken");
 
-        const response = await fetch("http://localhost:8080/auth/refresh", {
+        const response = await fetch(`${ENV.API_BASE_URL}/auth/refresh`, {
             method: "POST",
             credentials: "include",
         });
@@ -148,7 +148,7 @@ async function handleLogout() {
 
 async function fetchLogout() {
     try {
-        let response = await fetch("http://localhost:8080/auth", {
+        let response = await fetch(`${ENV.API_BASE_URL}/auth`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${accessToken}` },
             credentials: "include",
@@ -162,7 +162,7 @@ async function fetchLogout() {
             }
 
             accessToken = localStorage.getItem("accessToken");
-            response = await fetch("http://localhost:8080/auth", {
+            response = await fetch(`${ENV.API_BASE_URL}/auth`, {
                 method: "DELETE",
                 headers: { "Authorization": `Bearer ${accessToken}` },
                 credentials: "include",
@@ -248,7 +248,7 @@ async function handleChangePassword() {
 }
 
 async function fetchChangePassword(userId, passwordValue, passwordConfirmValue) {
-    let response = await fetch(`http://localhost:8080/users/${userId}/password`, {
+    let response = await fetch(`${ENV.API_BASE_URL}/users/${userId}/password`, {
         method: "PATCH",
         headers: {
             "Content-Type": "application/json",
@@ -269,7 +269,7 @@ async function fetchChangePassword(userId, passwordValue, passwordConfirmValue) 
         }
 
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch(`http://localhost:8080/users/${userId}/password`, {
+        response = await fetch(`${ENV.API_BASE_URL}/users/${userId}/password`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",

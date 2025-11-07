@@ -203,7 +203,7 @@ async function uploadImageToS3(file) {
     formData.append("file", file);
 
     try {
-        const response = await fetch("http://localhost:8080/images/presigned-url", {
+        const response = await fetch(`${ENV.API_BASE_URL}/images/presigned-url`, {
             method: "POST",
             body: formData,
         });
@@ -234,7 +234,7 @@ document.getElementById("signupForm").addEventListener("submit", async (e) => {
             profileImageUrl = await uploadImageToS3(selectedFile);
         }
 
-        const response = await fetch("http://localhost:8080/users", {
+        const response = await fetch(`${ENV.API_BASE_URL}/users`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

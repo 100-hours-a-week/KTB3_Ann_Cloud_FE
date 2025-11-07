@@ -40,6 +40,4 @@ app.get('/password', (req, res) => {
     res.sendFile(path.join(__dirname, 'html', 'change-password.html'))
 })
 
-app.listen(PORT, () => {
-    console.log(`서버 실행 중 http://localhost:${PORT}`);
-});
+app.listen(PORT, "0.0.0.0", () => console.log(`Server on port ${PORT}`));

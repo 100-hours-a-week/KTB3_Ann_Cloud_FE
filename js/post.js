@@ -98,7 +98,7 @@ function handleApiError(result) {
 /* ======================== 토큰 재발급 ======================== */
 async function tryRefreshToken() {
     try {
-        const response = await fetch("http://localhost:8080/auth/refresh", {
+        const response = await fetch(`${ENV.API_BASE_URL}/auth/refresh`, {
             method: "POST",
             credentials: "include",
         });
@@ -133,7 +133,7 @@ async function loadUserProfile() {
 }
 
 async function fetchUserProfile() {
-    let response = await fetch("http://localhost:8080/users/me", {
+    let response = await fetch(`${ENV.API_BASE_URL}/users/me`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${accessToken}` },
         credentials: "include",
@@ -147,7 +147,7 @@ async function fetchUserProfile() {
         }
 
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch("http://localhost:8080/users/me", {
+        response = await fetch(`${ENV.API_BASE_URL}/users/me`, {
             method: "GET",
             headers: { "Authorization": `Bearer ${accessToken}` },
             credentials: "include",
@@ -206,7 +206,7 @@ async function handleLogout() {
 
 async function fetchLogout() {
     try {
-        let response = await fetch("http://localhost:8080/auth", {
+        let response = await fetch(`${ENV.API_BASE_URL}/auth`, {
             method: "DELETE",
             headers: { "Authorization": `Bearer ${accessToken}` },
             credentials: "include",
@@ -220,7 +220,7 @@ async function fetchLogout() {
             }
 
             accessToken = localStorage.getItem("accessToken");
-            response = await fetch("http://localhost:8080/auth", {
+            response = await fetch(`${ENV.API_BASE_URL}/auth`, {
                 method: "DELETE",
                 headers: { "Authorization": `Bearer ${accessToken}` },
                 credentials: "include",
@@ -272,7 +272,7 @@ async function initPostPage() {
 }
 
 async function fetchPostData(postId) {
-    let response = await fetch(`http://localhost:8080/posts/${postId}`, {
+    let response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}`, {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },
         credentials: "include",
@@ -285,7 +285,7 @@ async function fetchPostData(postId) {
             return;
         }
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch(`http://localhost:8080/posts/${postId}`, {
+        response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}`, {
             method: "GET",
             headers: { Authorization: `Bearer ${accessToken}` },
             credentials: "include",
@@ -318,7 +318,7 @@ async function deletePost() {
 }
 
 async function fetchDeletePost(postId) {
-    let response = await fetch(`http://localhost:8080/posts/${postId}`, {
+    let response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` },
         credentials: "include",
@@ -331,7 +331,7 @@ async function fetchDeletePost(postId) {
             return;
         }
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch(`http://localhost:8080/posts/${postId}`, {
+        response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${accessToken}` },
             credentials: "include",
@@ -366,7 +366,7 @@ async function handleLike() {
 async function fetchLike() {
     const method = isLiked ? "DELETE" : "POST";
 
-    let response = await fetch(`http://localhost:8080/posts/${postId}/likes`, {
+    let response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}/likes`, {
         method: method,
         headers: { Authorization: `Bearer ${accessToken}` },
         credentials: "include",
@@ -379,7 +379,7 @@ async function fetchLike() {
             return;
         }
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch(`http://localhost:8080/posts/${postId}/likes`, {
+        response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}/likes`, {
             method: method,
             headers: { Authorization: `Bearer ${accessToken}` },
             credentials: "include",
@@ -429,7 +429,7 @@ async function fetchComments() {
 }
 
 async function fetchCommentData() {
-    let url = `http://localhost:8080/posts/${postId}/comments`;
+    let url = `${ENV.API_BASE_URL}/posts/${postId}/comments`;
     if (lastCommentCreatedAt && lastCommentId) {
       const formattedDate = lastCommentCreatedAt.replace(" ", "T");
       url += `?lastCommentCreatedAt=${formattedDate}&lastCommentId=${lastCommentId}`;
@@ -491,7 +491,7 @@ async function addComment() {
 }
 
 async function fetchAddComment(content) {
-    let response = await fetch(`http://localhost:8080/posts/${postId}/comments`, {
+    let response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}/comments`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -508,7 +508,7 @@ async function fetchAddComment(content) {
             return  ;
         }
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch(`http://localhost:8080/posts/${postId}/comments`, {
+        response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}/comments`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -555,7 +555,7 @@ async function updateComment(commentId, newContent, commentCard) {
 }
 
 async function fetchUpdateComment(commentId, newContent) {
-    let response = await fetch(`http://localhost:8080/posts/${postId}/comments/${commentId}`, {
+    let response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}/comments/${commentId}`, {
         method: "PATCH",
         headers: {
             "Content-Type": "application/json",
@@ -572,7 +572,7 @@ async function fetchUpdateComment(commentId, newContent) {
             return;
         }
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch(`http://localhost:8080/posts/${postId}/comments/${commentId}`, {
+        response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}/comments/${commentId}`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",
@@ -609,7 +609,7 @@ async function deleteComment() {
 
 async function fetchDeleteComment(postId, commentId) {
 
-    let response = await fetch(`http://localhost:8080/posts/${postId}/comments/${commentId}`, {
+    let response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}/comments/${commentId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` },
         credentials: "include",
@@ -622,7 +622,7 @@ async function fetchDeleteComment(postId, commentId) {
             return;
         }
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch(`http://localhost:8080/posts/${postId}/comments/${commentId}`, {
+        response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}/comments/${commentId}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${accessToken}` },
             credentials: "include",

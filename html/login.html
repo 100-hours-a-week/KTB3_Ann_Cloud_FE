@@ -43,9 +43,16 @@
     <script src="../js/login.js"></script>
 
     <footer class="footer">
-        <a href="http://localhost:8080/terms?from=login" target="_blank">이용약관</a> |
-        <a href="http://localhost:8080/privacy?from=login" target="_blank">개인정보처리방침</a>
+        <a id="termsLink" target="_blank">이용약관</a> |
+        <a id="privacyLink" target="_blank">개인정보처리방침</a>
     </footer>
+
+    <script type="module">
+        import ENV from "../js/config.js";
+
+        document.getElementById("termsLink").href = `${ENV.API_BASE_URL}/terms?from=login`;
+        document.getElementById("privacyLink").href = `${ENV.API_BASE_URL}/privacy?from=login`;
+    </script>
 
 </body>
 </html>

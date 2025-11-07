@@ -80,7 +80,7 @@ async function tryRefreshToken() {
     try {
         localStorage.removeItem("accessToken");
 
-        const response = await fetch("http://localhost:8080/auth/refresh", {
+        const response = await fetch(`${ENV.API_BASE_URL}/auth/refresh`, {
             method: "POST",
             credentials: "include",
         });
@@ -115,7 +115,7 @@ async function loadUserProfile() {
 }
 
 async function fetchUserProfile() {
-    let response = await fetch("http://localhost:8080/users/me", {
+    let response = await fetch(`${ENV.API_BASE_URL}/users/me`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${accessToken}` },
         credentials: "include",
@@ -129,7 +129,7 @@ async function fetchUserProfile() {
         }
 
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch("http://localhost:8080/users/me", {
+        response = await fetch(`${ENV.API_BASE_URL}/users/me`, {
             method: "GET",
             headers: { "Authorization": `Bearer ${accessToken}` },
             credentials: "include",
@@ -188,7 +188,7 @@ async function handleLogout() {
 
 async function fetchLogout() {
     try {
-        let response = await fetch("http://localhost:8080/auth", {
+        let response = await fetch(`${ENV.API_BASE_URL}/auth`, {
             method: "DELETE",
             headers: { "Authorization": `Bearer ${accessToken}` },
             credentials: "include",
@@ -202,7 +202,7 @@ async function fetchLogout() {
             }
 
             accessToken = localStorage.getItem("accessToken");
-            response = await fetch("http://localhost:8080/auth", {
+            response = await fetch(`${ENV.API_BASE_URL}/auth`, {
                 method: "DELETE",
                 headers: { "Authorization": `Bearer ${accessToken}` },
                 credentials: "include",
@@ -273,7 +273,7 @@ async function loadPostData() {
 }
 
 async function fetchPostEditData() {
-    let response = await fetch(`http://localhost:8080/posts/${postId}/edit`, {
+    let response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}/edit`, {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },
         credentials: "include",
@@ -287,7 +287,7 @@ async function fetchPostEditData() {
         }
 
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch(`http://localhost:8080/posts/${postId}/edit`, {
+        response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}/edit`, {
             method: "GET",
             headers: { Authorization: `Bearer ${accessToken}` },
             credentials: "include",
@@ -391,7 +391,7 @@ async function uploadImagesToS3(files) {
 
 async function requestImageUpload(formData) {
 
-    let response = await fetch("http://localhost:8080/images", {
+    let response = await fetch(`${ENV.API_BASE_URL}/images`, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
@@ -405,7 +405,7 @@ async function requestImageUpload(formData) {
         }
 
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch("http://localhost:8080/images", {
+        response = await fetch(`${ENV.API_BASE_URL}/images`, {
             method: "POST",
             headers: { Authorization: `Bearer ${accessToken}` },
             body: formData,
@@ -488,7 +488,7 @@ async function updatePost() {
 }
 
 async function fetchUpdatePost(body) {
-    let response = await fetch(`http://localhost:8080/posts/${postId}`, {
+    let response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}`, {
         method: "PATCH",
         headers: {
             "Content-Type": "application/json",
@@ -506,7 +506,7 @@ async function fetchUpdatePost(body) {
         }
 
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch(`http://localhost:8080/posts/${postId}`, {
+        response = await fetch(`${ENV.API_BASE_URL}/posts/${postId}`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",

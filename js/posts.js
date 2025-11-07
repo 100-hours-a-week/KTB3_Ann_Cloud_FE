@@ -58,7 +58,7 @@ function formatNumber(num) {
 // ====================== 토큰 재발급 ======================
 async function tryRefreshToken() {
     try {
-        const response = await fetch("http://localhost:8080/auth/refresh", {
+        const response = await fetch(`${ENV.API_BASE_URL}/auth/refresh`, {
             method: "POST",
             credentials: "include",
         });
@@ -93,7 +93,7 @@ async function loadUserProfile() {
 }
 
 async function fetchUserProfile() {
-    let response = await fetch("http://localhost:8080/users/me", {
+    let response = await fetch(`${ENV.API_BASE_URL}/users/me`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${accessToken}` },
         credentials: "include",
@@ -107,7 +107,7 @@ async function fetchUserProfile() {
         }
 
         accessToken = localStorage.getItem("accessToken");
-        response = await fetch("http://localhost:8080/users/me", {
+        response = await fetch(`${ENV.API_BASE_URL}/users/me`, {
             method: "GET",
             headers: { "Authorization": `Bearer ${accessToken}` },
             credentials: "include",
@@ -166,7 +166,7 @@ async function handleLogout() {
 
 async function fetchLogout() {
     try {
-        let response = await fetch("http://localhost:8080/auth", {
+        let response = await fetch(`${ENV.API_BASE_URL}/auth`, {
             method: "DELETE",
             headers: { "Authorization": `Bearer ${accessToken}` },
             credentials: "include",
@@ -180,7 +180,7 @@ async function fetchLogout() {
             }
 
             accessToken = localStorage.getItem("accessToken");
-            response = await fetch("http://localhost:8080/auth", {
+            response = await fetch(`${ENV.API_BASE_URL}/auth`, {
                 method: "DELETE",
                 headers: { "Authorization": `Bearer ${accessToken}` },
                 credentials: "include",
@@ -246,7 +246,7 @@ async function fetchPosts() {
 }
 
 async function fetchPostData() {
-    let url = "http://localhost:8080/posts";
+    let url = `${ENV.API_BASE_URL}/posts`;
 
     if (lastPostCreatedAt && lastPostId) {
         const formattedDate = lastPostCreatedAt.replace(" ", "T");
