@@ -421,6 +421,8 @@ async function fetchComments() {
         lastCommentCreatedAt = result.data.last_comment_created_at;
         lastCommentId = result.data.last_comment_id;
 
+        observer.disconnect();
+
         if (commentList.lastElementChild) {
             observer.observe(commentList.lastElementChild);
         }
@@ -479,8 +481,6 @@ async function addComment() {
         if (!result) {
             return;
         }
-
-        observer.disconnect();
 
         commentInput.value = "";
         submitComment.disabled = true;
