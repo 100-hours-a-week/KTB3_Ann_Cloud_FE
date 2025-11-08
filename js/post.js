@@ -401,6 +401,8 @@ async function fetchLike() {
 
 /* ======================== 댓글 ======================== */
 async function fetchComments() {
+    console.log("fetchComments called");
+
     if (isLoading) {
         return;
     }
