@@ -408,6 +408,8 @@ async function fetchComments() {
     }
     isLoading = true;
 
+    observer.disconnect();
+
     try {
         const result = await fetchCommentData();
         if (!result) {
@@ -422,6 +424,9 @@ async function fetchComments() {
         renderComments(comments);
         lastCommentCreatedAt = result.data.last_comment_created_at;
         lastCommentId = result.data.last_comment_id;
+
+        console.log("lastCommentCreatedAt:", lastCommentCreatedAt);
+        console.log("lastCommentId:", lastCommentId);
 
         if (commentList.lastElementChild) {
             observer.observe(commentList.lastElementChild);
