@@ -421,8 +421,6 @@ async function fetchComments() {
         lastCommentCreatedAt = result.data.last_comment_created_at;
         lastCommentId = result.data.last_comment_id;
 
-        observer.disconnect();
-
         if (commentList.lastElementChild) {
             observer.observe(commentList.lastElementChild);
         }
@@ -489,7 +487,7 @@ async function addComment() {
         lastCommentId = null;
 
         await fetchComments();
-        await initPostPage();
+        window.location.reload();
     } catch {
         showToast("댓글 등록 중 오류가 발생했습니다.");
     }
