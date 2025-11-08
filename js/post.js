@@ -408,6 +408,8 @@ async function fetchComments() {
     }
     isLoading = true;
 
+    observer.disconnect();
+
     try {
         const result = await fetchCommentData();
         if (!result) {
