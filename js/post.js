@@ -408,8 +408,6 @@ async function fetchComments() {
     }
     isLoading = true;
 
-    observer.disconnect();
-
     try {
         const result = await fetchCommentData();
         if (!result) {
@@ -490,7 +488,7 @@ async function addComment() {
         lastCommentCreatedAt = null;
         lastCommentId = null;
 
-        await fetchComments();
+        // await fetchComments();
         window.location.reload();
     } catch {
         showToast("댓글 등록 중 오류가 발생했습니다.");
@@ -740,10 +738,6 @@ function updateLikeButtonUI(isLiked, count) {
 // 댓글 렌더링 함수
 function renderComments(comments) {
 
-    if (!lastCommentCreatedAt) {
-        commentList.innerHTML = "";
-    }
-
     comments.forEach(comment => {
         const card = document.createElement("div");
         card.classList.add("comment-card");
@@ -771,10 +765,10 @@ function renderComments(comments) {
         commentList.appendChild(card);
     });
 
-    const lastCard = commentList.lastElementChild;
-    if (lastCard) {
-        observer.observe(lastCard);
-    }
+    // const lastCard = commentList.lastElementChild;
+    // if (lastCard) {
+    //     observer.observe(lastCard);
+    // }
 }
 
 // ====================== 이벤트 ======================
