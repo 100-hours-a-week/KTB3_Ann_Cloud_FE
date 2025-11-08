@@ -740,6 +740,10 @@ function updateLikeButtonUI(isLiked, count) {
 // 댓글 렌더링 함수
 function renderComments(comments) {
 
+    if (!lastCommentCreatedAt) {
+        commentList.innerHTML = "";
+    }
+
     comments.forEach(comment => {
         const card = document.createElement("div");
         card.classList.add("comment-card");
