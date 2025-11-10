@@ -408,8 +408,6 @@ async function fetchComments() {
     }
     isLoading = true;
 
-    observer.disconnect();
-
     try {
         const result = await fetchCommentData();
         if (!result) {
@@ -770,10 +768,10 @@ function renderComments(comments) {
         commentList.appendChild(card);
     });
 
-    // const lastCard = commentList.lastElementChild;
-    // if (lastCard) {
-    //     observer.observe(lastCard);
-    // }
+    const lastCard = commentList.lastElementChild;
+    if (lastCard) {
+        observer.observe(lastCard);
+    }
 }
 
 // ====================== 이벤트 ======================
