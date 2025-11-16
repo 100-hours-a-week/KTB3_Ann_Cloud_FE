@@ -253,41 +253,25 @@ function finalizeLogout() {
 // ====================== 이미지 S3 업로드 ======================
 async function uploadImageToS3(file) {
     const formData = new FormData();
-    formData.append("files", file);
+    formData.append("image", file);
 
     try {
-        let response = await fetch(`${ENV.API_BASE_URL}/images`, {
+        const response = await fetch("https://jg722jkjml.execute-api.ap-northeast-2.amazonaws.com/dev/images", {
             method: "POST",
-            headers: { Authorization: `Bearer ${accessToken}` },
             body: formData,
         });
 
-        if (response.status === 401) {
-            const refreshSuccess = await tryRefreshToken();
-            if (!refreshSuccess) {
-                window.location.href = "/login";
-                return;
-            }
-
-            accessToken = localStorage.getItem("accessToken");
-            response = await fetch(`${ENV.API_BASE_URL}/images`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${accessToken}` },
-                body: formData,
-            });
-        }
-
         const result = await response.json();
-
         if (!response.ok) {
             handleApiError(result);
-            return;
         }
 
-        return result.data.images[0];
+        const imageUrl = result.data.files[0].file_url;
+
+        return imageUrl;
 
     } catch (error) {
-        showErrorToast("이미지 업로드 중 오류가 발생했습니다.");
+        showToast("이미지 업로드 중 오류가 발생했습니다.")
         return null;
     }
 }

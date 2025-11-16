@@ -362,68 +362,41 @@ function createFileList() {
 
 /* ======================== 이미지 업로드 ======================== */
 async function uploadImagesToS3(files) {
-    if (!files.length) {
-        return [];
-    }
+    if (!files.length) return [];
 
     const formData = new FormData();
-    files.forEach(file => formData.append("files", file));
+    files.forEach(file => formData.append("image", file));
 
     try {
-        let result = await requestImageUpload(formData);
+        const response = await fetch("https://jg722jkjml.execute-api.ap-northeast-2.amazonaws.com/dev/images", {
+            method: "POST",
+            body: formData,
+        });
 
-        if (!result) {
+        const result = await response.json();
+
+        if (!response.ok) {
+            handleApiError(result);
             return [];
         }
 
-        return files.map((file, idx) => {
-            const url = result.data.images[idx];
-            const dotIndex = file.name.lastIndexOf(".");
+        const uploadedImages = result.data.files.map((fileInfo, idx) => {
+            const originalFile = files[idx];
+            const dotIndex = originalFile.name.lastIndexOf(".");
             return {
-                image_url: url,
-                image_name: dotIndex !== -1 ? file.name.substring(0, dotIndex) : file.name,
-                extension: dotIndex !== -1 ? file.name.substring(dotIndex + 1) : "",
+                image_url: fileInfo.file_url,
+                image_name: dotIndex !== -1 ? originalFile.name.substring(0, dotIndex) : originalFile.name,
+                extension: dotIndex !== -1 ? originalFile.name.substring(dotIndex + 1) : "",
             };
         });
 
-    } catch {
+        return uploadedImages;
+
+    } catch (error) {
         showToast("이미지 업로드 중 오류가 발생했습니다.");
         return [];
     }
 }
-
-async function requestImageUpload(formData) {
-
-    let response = await fetch(`${ENV.API_BASE_URL}/images`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-        body: formData,
-    });
-
-    if (response.status === 401) {
-        const refreshed = await tryRefreshToken();
-        if (!refreshed) {
-            window.location.href = "/login";
-            return;
-        }
-
-        accessToken = localStorage.getItem("accessToken");
-        response = await fetch(`${ENV.API_BASE_URL}/images`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${accessToken}` },
-            body: formData,
-        });
-    }
-    
-    const result = await response.json();
-    if (!response.ok) {
-        handleApiError(result);
-        return;
-    }
-
-    return result;
-}
-
 
 // ====================== 게시글 수정 ======================
 async function updatePost() {

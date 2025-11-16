@@ -202,10 +202,10 @@ profileInput.addEventListener("change", (e) => {
 /* ======================== S3 업로드 ======================== */
 async function uploadImageToS3(file) {
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("image", file);
 
     try {
-        const response = await fetch(`${ENV.API_BASE_URL}/images/presigned-url`, {
+        const response = await fetch("https://jg722jkjml.execute-api.ap-northeast-2.amazonaws.com/dev/images", {
             method: "POST",
             body: formData,
         });
@@ -215,7 +215,7 @@ async function uploadImageToS3(file) {
             handleApiError(result);
         }
 
-        const imageUrl = result.data.image;
+        const imageUrl = result.data.files[0].file_url;
 
         return imageUrl;
 
